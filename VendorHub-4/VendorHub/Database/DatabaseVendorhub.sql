@@ -1,0 +1,139 @@
+CREATE DATABASE VendorHubDB;
+GO
+
+USE VendorHubDB;
+GO
+
+CREATE TABLE Users (
+    Id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    FullName NVARCHAR(100) NOT NULL,
+    Email NVARCHAR(100) NOT NULL UNIQUE,
+    PasswordHash NVARCHAR(255) NOT NULL,
+    Role NVARCHAR(20) NOT NULL,
+    IsApproved BIT NOT NULL DEFAULT 0,
+    IsActive BIT NOT NULL DEFAULT 1,
+    StoreName NVARCHAR(150) NULL,
+    StoreDescription NVARCHAR(MAX) NULL,
+    ProfileImage NVARCHAR(500) NULL,
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE()
+);
+GO
+
+CREATE TABLE Categories (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    Name NVARCHAR(100) NOT NULL UNIQUE
+);
+GO
+
+CREATE TABLE Products (
+    Id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    VendorId UNIQUEIDENTIFIER NOT NULL,
+    CategoryId INT NOT NULL,
+    Title NVARCHAR(150) NOT NULL,
+    Description NVARCHAR(MAX) NULL,
+    Price DECIMAL(10,2) NOT NULL,
+    Stock INT NOT NULL DEFAULT 0,
+    ViewerCount INT NOT NULL DEFAULT 0,
+    Status NVARCHAR(20) NOT NULL DEFAULT 'Pending',
+    RejectionReason NVARCHAR(500) NULL,
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    UpdatedAt DATETIME2 NULL,
+    CONSTRAINT FK_Products_Users FOREIGN KEY (VendorId) REFERENCES Users(Id),
+    CONSTRAINT FK_Products_Categories FOREIGN KEY (CategoryId) REFERENCES Categories(Id)
+);
+GO
+
+CREATE TABLE ProductImages (
+    Id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    ProductId UNIQUEIDENTIFIER NOT NULL,
+    ImageUrl NVARCHAR(500) NOT NULL,
+    DisplayOrder INT NOT NULL DEFAULT 0,
+    CONSTRAINT FK_ProductImages_Products FOREIGN KEY (ProductId) REFERENCES Products(Id) ON DELETE CASCADE
+);
+GO
+
+CREATE TABLE Orders (
+    Id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    CustomerId UNIQUEIDENTIFIER NOT NULL,
+    TotalAmount DECIMAL(10,2) NOT NULL DEFAULT 0,
+    Status NVARCHAR(20) NOT NULL DEFAULT 'Pending',
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT FK_Orders_Users FOREIGN KEY (CustomerId) REFERENCES Users(Id)
+);
+GO
+
+CREATE TABLE OrderItems (
+    Id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    OrderId UNIQUEIDENTIFIER NOT NULL,
+    ProductId UNIQUEIDENTIFIER NOT NULL,
+    VendorId UNIQUEIDENTIFIER NOT NULL,
+    Quantity INT NOT NULL,
+    UnitPrice DECIMAL(10,2) NOT NULL,
+    CONSTRAINT FK_OrderItems_Orders FOREIGN KEY (OrderId) REFERENCES Orders(Id) ON DELETE CASCADE,
+    CONSTRAINT FK_OrderItems_Products FOREIGN KEY (ProductId) REFERENCES Products(Id)
+);
+GO
+
+CREATE TABLE Favorites (
+    Id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    CustomerId UNIQUEIDENTIFIER NOT NULL,
+    ProductId UNIQUEIDENTIFIER NOT NULL,
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT FK_Favorites_Users FOREIGN KEY (CustomerId) REFERENCES Users(Id),
+    CONSTRAINT FK_Favorites_Products FOREIGN KEY (ProductId) REFERENCES Products(Id),
+    CONSTRAINT UQ_Favorites_Customer_Product UNIQUE (CustomerId, ProductId)
+);
+GO
+
+CREATE TABLE Reviews (
+    Id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    CustomerId UNIQUEIDENTIFIER NOT NULL,
+    ProductId UNIQUEIDENTIFIER NOT NULL,
+    OrderItemId UNIQUEIDENTIFIER NOT NULL,
+    Rating INT NOT NULL CHECK (Rating BETWEEN 1 AND 5),
+    Comment NVARCHAR(MAX) NULL,
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT FK_Reviews_Users FOREIGN KEY (CustomerId) REFERENCES Users(Id),
+    CONSTRAINT FK_Reviews_Products FOREIGN KEY (ProductId) REFERENCES Products(Id),
+    CONSTRAINT FK_Reviews_OrderItems FOREIGN KEY (OrderItemId) REFERENCES OrderItems(Id),
+    CONSTRAINT UQ_Reviews_Customer_Product UNIQUE (CustomerId, ProductId)
+);
+GO
+
+CREATE TABLE Notifications (
+    Id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    UserId UNIQUEIDENTIFIER NOT NULL,
+    Title NVARCHAR(200) NOT NULL,
+    Message NVARCHAR(MAX) NOT NULL,
+    Type NVARCHAR(50) NOT NULL,
+    IsRead BIT NOT NULL DEFAULT 0,
+    RelatedEntityId UNIQUEIDENTIFIER NULL,
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT FK_Notifications_Users FOREIGN KEY (UserId) REFERENCES Users(Id)
+);
+GO
+
+CREATE TABLE VendorPermissions (
+    Id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    VendorId UNIQUEIDENTIFIER NULL,
+    PermissionKey NVARCHAR(100) NOT NULL,
+    IsGranted BIT NOT NULL,
+    AppliedBy UNIQUEIDENTIFIER NOT NULL,
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT FK_VendorPermissions_Vendor FOREIGN KEY (VendorId) REFERENCES Users(Id),
+    CONSTRAINT FK_VendorPermissions_Admin FOREIGN KEY (AppliedBy) REFERENCES Users(Id)
+);
+GO
+
+CREATE INDEX IX_Products_VendorId ON Products(VendorId);
+CREATE INDEX IX_Products_CategoryId ON Products(CategoryId);
+CREATE INDEX IX_OrderItems_OrderId ON OrderItems(OrderId);
+CREATE INDEX IX_OrderItems_ProductId ON OrderItems(ProductId);
+CREATE INDEX IX_Orders_CustomerId ON Orders(CustomerId);
+CREATE INDEX IX_ProductImages_ProductId ON ProductImages(ProductId);
+CREATE INDEX IX_Reviews_ProductId ON Reviews(ProductId);
+CREATE INDEX IX_Reviews_OrderItemId ON Reviews(OrderItemId);
+CREATE INDEX IX_Notifications_UserId ON Notifications(UserId);
+CREATE INDEX IX_VendorPermissions_VendorId ON VendorPermissions(VendorId);
+CREATE INDEX IX_VendorPermissions_AppliedBy ON VendorPermissions(AppliedBy);
+GO

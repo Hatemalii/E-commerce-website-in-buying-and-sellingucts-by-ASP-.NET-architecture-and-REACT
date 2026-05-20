@@ -1,0 +1,35 @@
+ # .NET
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+*.dll
+*.exe
+*.pdb
+*.nupkg
+appsettings.Development.json
+
+# Environment variables
+.env
+*.env
+
+# React / Node
+node_modules/
+build/
+dist/
+.next/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
